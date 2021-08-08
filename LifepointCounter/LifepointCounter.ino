@@ -88,27 +88,6 @@ uint16_t DisplayUpdate() {
   // Keep track of start time
   uint16_t startTime = millis();
 
-  /* OLD UI CODE
-    // Health value on top
-    display.setCursor(15, 0);
-    display.print(Lifepoints);
-
-    // Health bar on bottom
-    int16_t maxHealth = FastMatch ? 4000 : 8000;
-    uint8_t fillWidth = map( // Calculate width of bar
-                      min(Lifepoints, maxHealth), // Upper constraint
-                      0, maxHealth,
-                      0, 117);
-    display.drawRect( // Border
-    4, 38,
-    119, 20,
-    1);
-    display.fillRect( // Fill
-    5, 39,
-    fillWidth, 18,
-    1);
-  */
-
   // Font size 2 for "LP", 3 for readout
   // We do not have the luxury of clearDisplay, so we must manually clear the areas we will be working with
 
