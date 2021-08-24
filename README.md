@@ -21,6 +21,7 @@ Pressing a value button will cause the Arduino to either subtract or add 10 repe
 * Arduino Pro Micro (x1)
 * Adafruit SSD1306 128x64 I²C OLED Display (x1)
 * Tactile Push Buttons (x6)
+* * Depending on the quality of the buttons, it may be necessary to put 100nF capacitors in parallel with them as debouncers
 * A bunch of wires (About 18, with varying length)
 * * Either plastic insulated or enameled copper
 * Some veraboard if you want to attach the buttons to something sturdy
