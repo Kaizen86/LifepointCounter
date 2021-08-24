@@ -1,0 +1,4 @@
+Copy all .sym files to /usr/share/gEDA/sym/CUSTOM
+Then insert the following line into the list contained in /usr/share/gEDA/gafrc.d/geda-clib.scm
+	("CUSTOM" "Custom")
+Restart gEDA and the files will be present in the library under the Custom category.
