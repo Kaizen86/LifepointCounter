@@ -1,59 +1,58 @@
 from PIL import Image
-from sys import stdout
-
-def get_mean(values_as_array):
-	value = 0 #initialise value as 0
-	#add all the numbers up
-	for number in values_as_array:
-		value += number
-	value = value / len(values_as_array) #divide by the number of numbers
-	return value #send that back
-
 from os import listdir
-files = []
-for item in listdir():
-	if item.endswith(".png"): 
-		files.append(item)
-		print(item)
 
-for item in files:
-	#load the source image as RGB
-	#srcimage = Image.open(input("Enter filename of image: ")).convert('RGB')
-	srcimage = Image.open(item).convert('RGB')
+def mean(values: list[int]):
+	"""Returns the mean average from a list of numbers"""
+	# The mean average is the sum of some numbers, divided by their quantity.
+	return sum(values) / len(values)
 
-	textdata = []
+# Get the list of image files in this directory
+files = [i for i in listdir() if i.endswith(".png")]
+
+for filename in files:
+	print(filename)
+	# Load the source image as RGB
+	srcimage = Image.open(filename).convert('RGB')
+
+	imagebits = []
 	for Y in range(0,srcimage.height):
-		line = ""
+		line = []
 		for X in range(0,srcimage.width):
 			#Get RGB and compute mean brightness of the RGB components
-			R,G,B = srcimage.getpixel((X,Y)) 
-			brightness = get_mean([R,G,B])
-			if brightness < 128:
-				line += "0"
-			else:
-				line += "1"
-		textdata.append(line)
-		
-	#output the text information properly
+			R,G,B = srcimage.getpixel((X,Y))
+			brightness = mean([R,G,B])
+			line.append(brightness >= 128)
+		imagebits.append(line)
+
+	# This section converts the booleans into a C source code array of bytes
 	i = 0
 	byte = "B"
 	print("{")
-	for lineindex, y in enumerate(textdata):
-		line = "\t" #indent
-		for x in y:
-			byte += x #append pixel to the byte
+	for lineindex, linebits in enumerate(imagebits):
+		line = "\t" # Indent line
+		for bit in linebits:
+			byte += "1" if bit else "0" # Append bit
 			i += 1 #keep track of how many bits that byte has
-			if i == 8: #do we have 8 bits? if yes, add that byte to the line and reset byte
-				i = 0 #start over at 0
-				line += byte + ", "
-				byte = "B" #each byte begins with "B"
-		if i != 0: #if last byte is not completely filled, pad with 0's
-			byte += "0"*(8-i) #padding
+			if i == 8: # Do we have 8 bits? If so, add that byte to the line and start a new one
+				line += byte + ", " # Append byte to line
+				i = 0 # Reset bit counter
+				byte = "B" # Each byte begins with "B"
+
+		if i != 0: # If the last byte is not completely filled, pad with 0's
+			byte += "0"*(8-i) # Generate and append padding
+			# Prepare for the next byte just as before
 			i = 0
-			line += byte + ", " #add to line and reset like normal
+			line += byte + ", "
 			byte = "B"
-		if lineindex == srcimage.height-1: line = line [:-2] #remove last comma if the last line
-		stdout.write(line+"\n") #output our handiwork
-	stdout.write("},\n\n")
-	
+
+		# If we're on the last line, remove the trailing comma.
+		if lineindex == srcimage.height-1:
+			line = line [:-2]
+
+		# Finally, print the finished line.
+		print(line)
+
+	# At the end of an image, print the closing array brace, ready for the next file.
+	print("},\n")
+
 input("\nDone.")
