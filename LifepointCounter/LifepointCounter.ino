@@ -20,7 +20,7 @@
 #include <Adafruit_SSD1306.h>
 #include "Images.h"
 
-#define SERIAL_DEBUG //Uncomment to enable serial debugging output
+//#define SERIAL_DEBUG //Uncomment to enable serial debugging output
 
 // Pin definitions
 #define SPEAKER 6 // Beeper speaker
@@ -39,8 +39,8 @@
 #define SCREEN_ADDRESS 0x3D // < See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-// Define a struct for storing previous button states
-// This is used to filter for Pulldown events on I/O.
+// Define a struct to organise the previous button states
+// These are used to filter for Pulldown events on I/O.
 struct ButtonStates {
   bool PlusMinus = true;
   bool Thousand = true;
@@ -54,7 +54,7 @@ ButtonStates BtnPrevious;
 // Initialise variables
 bool Addition = false;
 bool FastMatch = false;
-int16_t Lifepoints = 8000; // Must be a signed integer to facilitate detection of a Death State
+int16_t Lifepoints = 8000; // Must be a signed integer for detecting a Death state
 
 void DisplayFullRender() {
   // Draws every element, including ones that do not have the potential to change
@@ -66,48 +66,60 @@ void DisplayFullRender() {
   display.drawBitmap(
     0, 0,
     LeftGraphic,
-    48, 64, 1);
+    48, 64,
+    1);
 
   // Right chevron - the loops generate a 3px width
+  for (uint8_t i = 0; i < 3; i++) {
+    // Top half
+    display.drawLine(
+      116 + i, 0,
+      125 + i, 31,
+      1);
+  }
   for (uint8_t i = 0; i < 3; i++)
-    display.drawLine(116 + i, 0, // Top half
-                     125 + i, 31,
-                     1);
-  for (uint8_t i = 0; i < 3; i++)
-    display.drawLine(116 + i, 63, // Bottom half
-                     125 + i, 32,
-                     1);
+    // Bottom half
+    display.drawLine(
+      116 + i, 63,
+      125 + i, 32,
+      1);
   // Bottom line
-  display.drawFastHLine(28, 63,
-                        88, 1);
+  display.drawFastHLine(
+    28, 63,
+    88, 1);
 
   // Next, draw the dynamic components.
   DisplayUpdate();
 }
 uint16_t DisplayUpdate() {
   // Keep track of start time
-  uint16_t startTime = millis();
+  unsigned long startTime = millis();
 
   // Font size 2 for "LP", 3 for readout
   // We do not have the luxury of clearDisplay, so we must manually clear the areas we will be working with
 
   // Clear top bar
-  display.fillRect(42, 0,
-                   /*?*/74, 21,
-                   0);
+  display.fillRect(
+    42, 0,
+    74, 21,
+    0);
   // Top bar
-  uint8_t x = min(109, // Calculate where the bar's right edge and where the triangle should go
-                  map(Lifepoints,
-                      0, FastMatch ? 4000 : 8000,
-                      42, 109));
-  display.fillRect(42, 0,
-                   x - 42, 21,
-                   1);
+  uint8_t x = min(
+    109, 
+    // Calculate where the bar's right edge and where the triangle should go
+    map(Lifepoints,
+        0, FastMatch ? 4000 : 8000,
+        42, 109));
+  display.fillRect(
+    42, 0,
+    x - 42, 21,
+    1);
   // Top bar triangle
-  display.fillTriangle(x, 0,
-                       x + 6, 10,
-                       x, 19,
-                       1);
+  display.fillTriangle(
+    x, 0,
+    x + 6, 10,
+    x, 19,
+    1);
 
   // Top bar "LP"
   display.setCursor(42, 7);
@@ -117,15 +129,19 @@ uint16_t DisplayUpdate() {
   display.setTextColor(1); // Reset to 1
 
   // Lifepoint readout
-  display.fillRect(45, 40,
-                   69, 21, 0);
+  display.fillRect(
+    45, 40,
+    69, 21,
+    0);
   display.setCursor(45, 40);
   display.setTextSize(3);
   display.print(Lifepoints);
 
   // Update display
   display.display();
-  return millis() - startTime; // Return execution time of function
+  // Return execution time of function
+  // 16 bits will do just fine for the return value.
+  return (uint16_t)(millis() - startTime); 
 }
 
 uint16_t DisplayDeath(bool Visible) {
@@ -149,8 +165,10 @@ uint16_t DisplayDeath(bool Visible) {
 
 void setup() {
   // Initialise serial output
+#ifdef SERIAL_DEBUG
   Serial.begin(9600);
   Serial.println("Yugioh Lifepoint Counter v1.4");
+#endif
 
   // Initialise pins
   pinMode(SPEAKER,         OUTPUT);
@@ -168,7 +186,10 @@ void setup() {
   // Initialise display
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x64
+#ifdef SERIAL_DEBUG
     Serial.println(F("OLED display initialisation failed!"));
+#endif
+    
     noTone(SPEAKER);
     for (;;)
     {
@@ -180,6 +201,7 @@ void setup() {
       delay(500);
     }
   }
+
   display.setTextColor(WHITE);
 
   // Display splash screen
@@ -189,8 +211,6 @@ void setup() {
     Splashscreen,
     SCREEN_WIDTH, SCREEN_HEIGHT, 1);
   display.display();
-
-
 
   // Startup tune
   tone(SPEAKER, 500, 100);
@@ -250,20 +270,20 @@ void loop() {
     Lifepoints += Addition ? 10 : -10;
     Amount -= 10;
 
-    // Lifepoint caps
+    // Check if the player is dead
     if (Lifepoints <= 0) {
-      Lifepoints = 0;
+      Lifepoints = 0; // Cap at 0
 
       DisplayUpdate();
 
       // Death tune
       for (uint16_t freq = 2000; freq >= 100; freq -= 100)
       {
-        // Descending short beeps
+        // Descending short beeps - sounds like a piano slide
         tone(SPEAKER, freq);
         delay(30);
       }
-      noTone(SPEAKER); //Reset it
+      noTone(SPEAKER); // Silence!
       display.setTextSize(4);
       for (uint16_t i = 0; i < 5; i++)
       {
@@ -275,12 +295,13 @@ void loop() {
         delay(300);
         noTone(SPEAKER);
       }
-      // Easiest way to proceed after a Game Over state is to reset to normal
+      // Reset the health and then redraw the screen
       Lifepoints = FastMatch ? 4000 : 8000;
       DisplayFullRender();
       break;
     }
 
+    // Maximum health value
     else if (Lifepoints > 9990) {
       Lifepoints = 9990;
       // Error beep
@@ -289,6 +310,9 @@ void loop() {
       break;
     }
 
+    /* It's conceivable that updating the display can take different amounts of time.
+     * Therefore, the partial redraw routine returns the number of milliseconds it took.
+     * We use this time delta later in the delay to make sure we're keeping a steady pace. */
     int16_t deltaT = DisplayUpdate();
 
 #ifdef SERIAL_DEBUG
@@ -298,10 +322,10 @@ void loop() {
     Serial.println(Lifepoints);
 #endif
 
-    // Beep
+    // Blink the Activity light and make a tick sound
     digitalWrite(LEDACTIVE, LOW);
-    tone(SPEAKER, Addition ? 3000 : 2000, 20);
-    delay(max(0, 30 - deltaT));
+    tone(SPEAKER, Addition ? 3000 : 2000, 20); // Tick pitch varies depending on gains/losses
+    delay(max(0, 30 - deltaT)); // Keep a constant delay period
     digitalWrite(LEDACTIVE, HIGH);
   }
 }
